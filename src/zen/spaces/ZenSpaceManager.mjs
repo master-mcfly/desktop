@@ -3291,6 +3291,17 @@ class nsZenWorkspaces {
       ? gBrowser.selectedTabs
       : [TabContextMenu.contextTab];
     document.getElementById("tabContextMenu").hidePopup();
+    await this.moveTabsToWorkspaceAndFollow(tabs, workspaceID);
+  }
+
+  /**
+   * Moves tabs to a space and switches to that space, selecting the last
+   * moved tab there.
+   *
+   * @param {MozTabbrowserTab[]} tabs - The tabs to move
+   * @param {string} workspaceID - The uuid of the target space
+   */
+  async moveTabsToWorkspaceAndFollow(tabs, workspaceID) {
     this.moveTabsToWorkspace(tabs, workspaceID);
     // Make sure we select the last tab in the new workspace
     this.lastSelectedWorkspaceTabs[workspaceID] =

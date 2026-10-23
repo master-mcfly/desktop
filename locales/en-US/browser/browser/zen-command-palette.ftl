@@ -41,5 +41,6 @@ zen-action-switch-to-light-mode = Switch to Light Mode
 zen-action-switch-to-dark-mode = Switch to Dark Mode
 zen-action-print = Print
 zen-action-focus-on = Focus on
+zen-action-move-tab-to = Move Tab to
 zen-action-extension = Extension
 zen-action-open = Open

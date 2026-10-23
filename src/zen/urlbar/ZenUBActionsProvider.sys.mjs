@@ -201,6 +201,44 @@ export class ZenUrlbarProviderGlobalActions extends UrlbarProvider {
     return actions;
   }
 
+  #getMoveTabActions(window) {
+    const { gBrowser, gZenWorkspaces } = window;
+    if (gZenWorkspaces.privateWindowOrDisabled) {
+      return [];
+    }
+    const tab = gBrowser.selectedTab;
+    if (
+      tab.hasAttribute("zen-empty-tab") ||
+      tab.hasAttribute("zen-essential")
+    ) {
+      return [];
+    }
+    const label = labelFor("zen-action-move-tab-to");
+    let actions = [];
+    const activeSpaceUUID = gZenWorkspaces.activeWorkspace;
+    for (const workspace of gZenWorkspaces.getWorkspaces() ?? []) {
+      if (workspace.uuid !== activeSpaceUUID) {
+        const accentColor = gZenWorkspaces
+          .workspaceElement(workspace.uuid)
+          ?.style.getPropertyValue("--zen-primary-color");
+        actions.push({
+          label,
+          // Match the whole phrase, so "move" and the space name both work.
+          matchText: `${label} ${workspace.name}`,
+          extraPayload: {
+            moveTabToWorkspaceId: workspace.uuid,
+            prettyName: workspace.name,
+            prettyIcon: workspace.icon,
+            accentColor,
+          },
+          commandId: `zen:move-tab-to-workspace-${workspace.uuid}`,
+          icon: "chrome://browser/skin/zen-icons/arrow-corner-down-right.svg",
+        });
+      }
+    }
+    return actions;
+  }
+
   async #getExtensionActions(window) {
     const addons = await lazy.AddonManager.getAddonsByTypes(["extension"]);
     if (window.gBrowser.selectedTab.hasAttribute("zen-empty-tab")) {
@@ -238,6 +276,7 @@ export class ZenUrlbarProviderGlobalActions extends UrlbarProvider {
     return globalActions
       .filter(a => a.isAvailable(window))
       .concat(this.#getWorkspaceActions(window))
+      .concat(this.#getMoveTabActions(window))
       .concat(await this.#getExtensionActions(window));
   }
 
@@ -259,7 +298,8 @@ export class ZenUrlbarProviderGlobalActions extends UrlbarProvider {
         results.push({ action, score: 100 });
         continue;
       }
-      const label = action.extraPayload?.prettyName || action.label;
+      const label =
+        action.matchText || action.extraPayload?.prettyName || action.label;
       const score = this.#calculateFuzzyScore(label, query);
       if (
         score >
@@ -562,6 +602,17 @@ export class ZenUrlbarProviderGlobalActions extends UrlbarProvider {
     ownerGlobal.gBrowser.selectedBrowser.focus();
     if (typeof command === "function") {
       command(ownerGlobal);
+      return;
+    }
+    if (payload.moveTabToWorkspaceId) {
+      const { gBrowser, gZenWorkspaces } = ownerGlobal;
+      const tabs = gBrowser.selectedTab.multiselected
+        ? gBrowser.selectedTabs
+        : [gBrowser.selectedTab];
+      gZenWorkspaces.moveTabsToWorkspaceAndFollow(
+        tabs,
+        payload.moveTabToWorkspaceId
+      );
       return;
     }
     // Switch workspace if theres a workspaceId in the payload.
